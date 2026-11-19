@@ -395,12 +395,14 @@ describe("UI — flujo completo seleccionar → plan → confirmar → resultado
       skippedCount: 0,
       freedBytes: 10,
       action: "trash",
+      // Forma REAL del servidor: los items de clean llevan el tamaño en
+      // entry.sizeBytes, no en el nivel superior (regresión del crash toFixed).
       items: [
         {
           entry: ENTRY,
           action: "trash",
           result: "trashed",
-          sizeBytes: 10
+          storedPath: "items/0001-dist"
         }
       ],
       git: { available: false, output: "no repo" }
@@ -469,6 +471,105 @@ describe("UI — flujo completo seleccionar → plan → confirmar → resultado
     expect(body.action).toBe("trash");
     expect(h.el("result-stats").children.length).toBe(5);
     expect(h.el("result-body").children.length).toBe(1);
+  });
+
+  it("generar plan no ejecuta limpieza; cancelar tampoco; confirmar después sí (una vez)", async () => {
+    const h = loadUi(flowFetch(async () => jsonResponse(200, CLEAN_OK)));
+    await driveToPlan(h);
+    // Punto intermedio: plan generado, SIN confirmar.
+    expect(cleanCalls(h)).toHaveLength(0);
+    expect(h.el("view-plan").hidden).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(cleanCalls(h)).toHaveLength(0);
+    // Cancelar no ejecuta nada.
+    h.el("btn-cancel-plan").click();
+    expect(h.el("view-inspect").hidden).toBe(false);
+    expect(cleanCalls(h)).toHaveLength(0);
+    // Regenerar y confirmar en una interacción separada.
+    h.el("btn-generate-plan").click();
+    await vi.waitFor(() => {
+      expect(h.el("view-plan").hidden).toBe(false);
+    });
+    expect(cleanCalls(h)).toHaveLength(0);
+    h.el("btn-confirm-clean").click();
+    await vi.waitFor(() => {
+      expect(h.el("view-result").hidden).toBe(false);
+    });
+    expect(cleanCalls(h)).toHaveLength(1);
+    // El resultado se renderiza sin crash (regresión toFixed con items de clean).
+    expect(h.el("result-body").children.length).toBe(1);
+    expect(h.el("error-banner").hidden).toBe(true);
+  });
+
+  it("resultados parciales/fallidos de clean con forma real se renderizan sin crash", async () => {
+    const mixed = {
+      result: {
+        executedCount: 1,
+        failedCount: 1,
+        skippedCount: 1,
+        freedBytes: 10,
+        action: "trash",
+        items: [
+          {
+            entry: ENTRY,
+            action: "trash",
+            result: "trashed",
+            storedPath: "items/0001-dist"
+          },
+          {
+            entry: { ...ENTRY, relativePath: "out" },
+            action: "trash",
+            result: "failed",
+            error: "EPERM"
+          },
+          {
+            entry: { ...ENTRY, relativePath: "coverage" },
+            action: "trash",
+            result: "skipped"
+          }
+        ],
+        git: { available: false, output: "no repo" }
+      },
+      reportId: "r2"
+    };
+    const h = loadUi(flowFetch(async () => jsonResponse(200, mixed)));
+    await driveToPlan(h);
+    h.el("btn-confirm-clean").click();
+    await vi.waitFor(() => {
+      expect(h.el("view-result").hidden).toBe(false);
+    });
+    expect(h.el("result-body").children.length).toBe(3);
+    expect(h.el("error-banner").hidden).toBe(true);
+  });
+
+  it("item sin tamaño en ninguna parte muestra — sin crash (respuesta mal formada)", async () => {
+    const malformed = {
+      result: {
+        executedCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        freedBytes: 0,
+        action: "trash",
+        items: [
+          {
+            entry: { relativePath: "dist", risk: "safe" },
+            action: "trash",
+            result: "trashed"
+          }
+        ],
+        git: { available: false, output: "no repo" }
+      },
+      reportId: "r3"
+    };
+    const h = loadUi(flowFetch(async () => jsonResponse(200, malformed)));
+    await driveToPlan(h);
+    h.el("btn-confirm-clean").click();
+    await vi.waitFor(() => {
+      expect(h.el("view-result").hidden).toBe(false);
+    });
+    const row = h.el("result-body").children[0] as ShimElement;
+    expect((row.children[4] as ShimElement).textContent).toBe("—");
+    expect(h.el("error-banner").hidden).toBe(true);
   });
 
   it("doble clic de confirmación pendiente produce exactamente un POST", async () => {
@@ -720,6 +821,46 @@ describe("UI — invalidación del plan de restauración", () => {
     h.fetchMock.mock.calls.filter(
       (c) => String(c[0]) === "/api/restore/execute"
     );
+
+  it("resultado de restauración exitoso se renderiza con su tamaño real", async () => {
+    const RESTORE_OK = {
+      result: {
+        id: "rr1",
+        target: "C:/demo",
+        sessionId: "s1",
+        originalPlanId: "p0",
+        startedAt: "2026-01-01T00:00:00Z",
+        finishedAt: "2026-01-01T00:00:01Z",
+        items: [
+          {
+            relativePath: "dist",
+            originalPath: "C:/demo/dist",
+            restoredPath: "C:/demo/dist",
+            result: "restored",
+            risk: "safe",
+            sizeBytes: 10
+          }
+        ],
+        restoredCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        conflictCount: 0,
+        restoredBytes: 10,
+        warnings: []
+      },
+      reportId: "rr1"
+    };
+    const h = loadUi(restoreFetch(async () => jsonResponse(200, RESTORE_OK)));
+    await driveToRestoreConfirm(h);
+    h.el("btn-restore-execute").click();
+    await vi.waitFor(() => {
+      expect(h.el("view-result").hidden).toBe(false);
+    });
+    expect(h.el("result-body").children.length).toBe(1);
+    const row = h.el("result-body").children[0] as ShimElement;
+    expect((row.children[4] as ShimElement).textContent).toBe("10 B");
+    expect(h.el("error-banner").hidden).toBe(true);
+  });
 
   it("404 en restauración invalida su plan, oculta la confirmación y bloquea el botón", async () => {
     const h = loadUi(

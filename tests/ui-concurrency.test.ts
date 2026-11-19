@@ -64,6 +64,45 @@ async function createCleanPlanViaApi(fixture: Fixture): Promise<string> {
   return data.plan.id;
 }
 
+describe("generar plan no tiene efectos destructivos (servidor)", () => {
+  it("plan generado: archivos intactos, sin papelera ni auditoría; confirmar ejecuta una vez", async () => {
+    const fixture = await makeFixtureApp();
+    const planId = await createCleanPlanViaApi(fixture);
+    // Tras generar el plan: nada se movió, nada se auditó.
+    for (const rel of ["node_modules", "dist", "debug.log"]) {
+      expect(await fs.stat(path.join(fixture.target, rel))).toBeTruthy();
+    }
+    await expect(
+      fs.stat(path.join(fixture.target, ".repo-cleaner-trash"))
+    ).rejects.toThrow();
+    expect(await readAudit(fixture.auditPath)).toEqual([]);
+    // Esperar sin confirmar mantiene las garantías.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await readAudit(fixture.auditPath)).toEqual([]);
+    // Confirmación explícita posterior: exactamente una ejecución.
+    const response = await post(fixture.app, "/api/clean", {
+      planId,
+      confirmed: true,
+      action: "trash"
+    });
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as {
+      result: {
+        executedCount: number;
+        items: Array<{ entry: { relativePath: string } }>;
+      };
+    };
+    expect(data.result.executedCount).toBe(3);
+    expect(data.result.items.map((i) => i.entry.relativePath).sort()).toEqual([
+      "debug.log",
+      "dist",
+      "node_modules"
+    ]);
+    const records = await readAudit(fixture.auditPath);
+    expect(records.filter((r) => r.result === "trashed")).toHaveLength(3);
+  });
+});
+
 describe("consumo único de planes bajo concurrencia", () => {
   it("clean: 10 solicitudes simultáneas -> exactamente 1 ejecución y 1 auditoría", async () => {
     const fixture = await makeFixtureApp();

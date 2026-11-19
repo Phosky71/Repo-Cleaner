@@ -569,7 +569,8 @@ function renderResult() {
     tdResult.append(badge(item.result, item.result));
     const tdSize = document.createElement("td");
     tdSize.className = "size";
-    tdSize.textContent = fmtBytes(item.sizeBytes);
+    const sizeBytes = item.sizeBytes ?? item.entry?.sizeBytes;
+    tdSize.textContent = sizeBytes === undefined ? "—" : fmtBytes(sizeBytes);
     const tdDetail = document.createElement("td");
     tdDetail.className = "reason";
     tdDetail.textContent =
