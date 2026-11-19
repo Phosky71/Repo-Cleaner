@@ -103,7 +103,11 @@ también se fusionan con las internas. Alias `node` → `nodejs`.
 - CSP estricta: `default-src 'self'`, sin unsafe-inline/eval.
 - Frontend vanilla con `textContent` (anti XSS); sin innerHTML.
 - Sin endpoints de edición/borrado de informes; sin ejecución de comandos.
-- Planes con TTL (15 min) y un solo uso; revalidación del target al ejecutar.
+- Planes con TTL (15 min) y **consumo único garantizado bajo concurrencia**:
+  reserva síncrona del plan antes de cualquier `await`; una segunda
+  solicitud simultánea recibe 409 y no ejecuta ni audita nada. Los rechazos
+  de validación secuenciales conservan el plan. Revalidación del target
+  contra la raíz autorizada en el momento de ejecutar.
 - Raíz autorizada fija por argumento `ui`; toda ruta fuera se rechaza.
 
 ## 14. Confirmaciones destructivas

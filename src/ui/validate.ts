@@ -4,7 +4,7 @@ import path from "node:path";
 /** Error de API con código HTTP; nunca expone stack traces al cliente. */
 export class ApiError extends Error {
   constructor(
-    public readonly status: 400 | 403 | 404 | 410 | 500,
+    public readonly status: 400 | 403 | 404 | 409 | 410 | 500,
     message: string
   ) {
     super(message);

@@ -60,9 +60,10 @@ D2 (experiencia de usuario), E1 (empaquetado) y E2 (documentación final).
 7. Papelera dentro del target (o `--trash-dir` validado); rename atómico,
    fallback EXDEV; manifest reescrito tras cada movimiento/restauración;
    sesiones nunca borradas automáticamente.
-8. Planes (clean y restore) en memoria con TTL 15 min y un solo uso;
-   acción de ejecución debe coincidir con la del plan; overwrite exige
-   confirmación adicional.
+8. Planes (clean y restore) en memoria con TTL 15 min y consumo único
+   garantizado bajo concurrencia (reserva síncrona; 409 a solicitudes
+   simultáneas; tests de concurrencia); la acción de ejecución debe
+   coincidir con la del plan; overwrite exige confirmación adicional.
 9. Auditoría solo metadatos; `clean-audit.jsonl` protegido; se conserva
    tras purgar sesiones.
 10. UI sin frameworks; CSP `default-src 'self'`; sin ejecución de comandos;

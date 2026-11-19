@@ -109,6 +109,9 @@ export function createServer(options: UiServerOptions): Hono {
 
   const plans = new Map<string, StoredPlan>();
   const restorePlans = new Map<string, StoredRestorePlan>();
+  // Reserva síncrona de planes en ejecución: garantiza consumo único incluso
+  // con solicitudes concurrentes (comprobación + alta sin awaits intermedios).
+  const executing = new Set<string>();
   const reports = new Map<string, ReportPaths>();
 
   const html = publicAsset("index.html").replaceAll(
@@ -262,48 +265,60 @@ export function createServer(options: UiServerOptions): Hono {
     if (!stored) {
       throw new ApiError(404, "El plan no existe o ya fue ejecutado");
     }
-    if (Date.now() >= stored.expiresAt) {
+    // Reserva síncrona: solo una solicitud concurrente puede consumir el plan.
+    if (executing.has(planId)) {
+      throw new ApiError(
+        409,
+        "El plan ya se está ejecutando: consumo único bajo concurrencia"
+      );
+    }
+    executing.add(planId);
+    try {
+      if (Date.now() >= stored.expiresAt) {
+        plans.delete(planId);
+        throw new ApiError(
+          410,
+          "El plan ha expirado (validez de 15 minutos). Genera un plan nuevo desde la inspección."
+        );
+      }
+      const action = data.action ?? stored.action;
+      if (action !== stored.action) {
+        throw new ApiError(
+          400,
+          "La acción no coincide con la del plan: permanent solo si se solicitó al crearlo"
+        );
+      }
+      // Revalidación del target contra la raíz autorizada en el momento de ejecutar.
+      await validateDirectoryWithinRoot(
+        stored.plan.target,
+        allowedRoot,
+        "plan.target"
+      );
+      if (stored.plan.items.some((item) => item.entry.risk === "protected")) {
+        throw new ApiError(
+          400,
+          "El plan contiene rutas protegidas: nunca eliminables"
+        );
+      }
+
+      // Un solo uso: evita reejecuciones/replay.
       plans.delete(planId);
-      throw new ApiError(
-        410,
-        "El plan ha expirado (validez de 15 minutos). Genera un plan nuevo desde la inspección."
-      );
-    }
-    const action = data.action ?? stored.action;
-    if (action !== stored.action) {
-      throw new ApiError(
-        400,
-        "La acción no coincide con la del plan: permanent solo si se solicitó al crearlo"
-      );
-    }
-    // Revalidación del target contra la raíz autorizada en el momento de ejecutar.
-    await validateDirectoryWithinRoot(
-      stored.plan.target,
-      allowedRoot,
-      "plan.target"
-    );
-    if (stored.plan.items.some((item) => item.entry.risk === "protected")) {
-      throw new ApiError(
-        400,
-        "El plan contiene rutas protegidas: nunca eliminables"
-      );
-    }
 
-    // Un solo uso: evita reejecuciones/replay.
-    plans.delete(planId);
-
-    // executeCleanPlan aplica el Safety Guard elemento a elemento,
-    // usa la papelera por defecto y registra la auditoría.
-    const result = await executeCleanPlan(stored.plan, rules, { auditPath });
-    result.git = verifyGitStatus(result.target);
-    if (result.git.available && result.git.deletedTracked.length > 0) {
-      result.warnings.push(
-        `Git detecta ${result.git.deletedTracked.length} ficheros versionados eliminados: revisa el informe.`
-      );
+      // executeCleanPlan aplica el Safety Guard elemento a elemento,
+      // usa la papelera por defecto y registra la auditoría.
+      const result = await executeCleanPlan(stored.plan, rules, { auditPath });
+      result.git = verifyGitStatus(result.target);
+      if (result.git.available && result.git.deletedTracked.length > 0) {
+        result.warnings.push(
+          `Git detecta ${result.git.deletedTracked.length} ficheros versionados eliminados: revisa el informe.`
+        );
+      }
+      const paths = await saveCleanResult(result, stored.report, reportsDir);
+      reports.set(result.id, paths);
+      return c.json({ result, reportId: result.id });
+    } finally {
+      executing.delete(planId);
     }
-    const paths = await saveCleanResult(result, stored.report, reportsDir);
-    reports.set(result.id, paths);
-    return c.json({ result, reportId: result.id });
   });
 
   app.get("/api/trash/:projectPath", async (c) => {
@@ -410,38 +425,52 @@ export function createServer(options: UiServerOptions): Hono {
         "El plan de restauración no existe o ya fue ejecutado"
       );
     }
-    if (Date.now() >= stored.expiresAt) {
-      restorePlans.delete(planId);
+    // Reserva síncrona: solo una solicitud concurrente puede consumir el plan.
+    if (executing.has(planId)) {
       throw new ApiError(
-        410,
-        "El plan de restauración ha expirado (validez de 15 minutos). Genera uno nuevo desde la papelera."
+        409,
+        "El plan de restauración ya se está ejecutando: consumo único bajo concurrencia"
       );
     }
-    await validateDirectoryWithinRoot(
-      stored.plan.target,
-      allowedRoot,
-      "plan.target"
-    );
-    const needsOverwrite = stored.plan.items.some(
-      (item) =>
-        item.approved && item.conflict && item.resolution === "overwrite"
-    );
-    if (needsOverwrite) {
-      if (data.overwriteConfirmed !== true) {
+    executing.add(planId);
+    try {
+      if (Date.now() >= stored.expiresAt) {
+        restorePlans.delete(planId);
         throw new ApiError(
-          400,
-          "Sobrescribir rutas existentes requiere confirmación adicional explícita (overwriteConfirmed: true)"
+          410,
+          "El plan de restauración ha expirado (validez de 15 minutos). Genera uno nuevo desde la papelera."
         );
       }
-      stored.plan.overwriteApproved = true;
-    }
+      await validateDirectoryWithinRoot(
+        stored.plan.target,
+        allowedRoot,
+        "plan.target"
+      );
+      const needsOverwrite = stored.plan.items.some(
+        (item) =>
+          item.approved && item.conflict && item.resolution === "overwrite"
+      );
+      if (needsOverwrite) {
+        if (data.overwriteConfirmed !== true) {
+          throw new ApiError(
+            400,
+            "Sobrescribir rutas existentes requiere confirmación adicional explícita (overwriteConfirmed: true)"
+          );
+        }
+        stored.plan.overwriteApproved = true;
+      }
 
-    // Un solo uso: evita reejecuciones.
-    restorePlans.delete(planId);
-    const result = await executeRestorePlan(stored.plan, rules, { auditPath });
-    const paths = await saveRestoreResult(result, reportsDir);
-    reports.set(result.id, paths);
-    return c.json({ result, reportId: result.id });
+      // Un solo uso: evita reejecuciones.
+      restorePlans.delete(planId);
+      const result = await executeRestorePlan(stored.plan, rules, {
+        auditPath
+      });
+      const paths = await saveRestoreResult(result, reportsDir);
+      reports.set(result.id, paths);
+      return c.json({ result, reportId: result.id });
+    } finally {
+      executing.delete(planId);
+    }
   });
 
   /* ---------- Informes históricos (fase 5, D1) ---------- */
