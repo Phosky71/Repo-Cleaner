@@ -72,6 +72,13 @@ function clearError() {
   $("error-banner").hidden = true;
 }
 
+class ApiCallError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function api(path, body) {
   const options = { headers: { "Content-Type": "application/json" } };
   if (body !== undefined) {
@@ -82,8 +89,9 @@ async function api(path, body) {
   try {
     response = await fetch(path, options);
   } catch {
-    throw new Error(
-      "Error de red: no se pudo contactar con el servidor local. Comprueba que sigue en ejecución y vuelve a intentarlo."
+    throw new ApiCallError(
+      "Error de red: no se pudo contactar con el servidor local. Comprueba que sigue en ejecución y vuelve a intentarlo.",
+      0
     );
   }
   let data = null;
@@ -97,7 +105,7 @@ async function api(path, body) {
       data && typeof data.error === "string"
         ? data.error
         : `Error HTTP ${response.status}`;
-    throw new Error(message);
+    throw new ApiCallError(message, response.status);
   }
   return data;
 }
@@ -404,6 +412,7 @@ async function generatePlan() {
 }
 
 function renderPlan() {
+  $("plan-invalid").hidden = true;
   const { plan, planHash, action, expiresAt } = state.planResp;
   const chips = $("plan-summary");
   chips.textContent = "";
@@ -441,9 +450,22 @@ function renderPlan() {
 }
 
 function updateConfirmButton() {
-  const isPermanent = state.planResp?.action === "permanent";
+  if (!state.planResp) {
+    $("btn-confirm-clean").disabled = true;
+    return;
+  }
+  const isPermanent = state.planResp.action === "permanent";
   const typedOk = $("permanent-confirm").value.trim() === "PERMANENTE";
   $("btn-confirm-clean").disabled = isPermanent ? !typedOk : false;
+}
+
+function invalidateCleanPlan(message) {
+  state.planResp = null;
+  $("btn-confirm-clean").disabled = true;
+  $("permanent-confirm-wrap").hidden = true;
+  $("plan-warning").hidden = true;
+  $("plan-invalid-message").textContent = message;
+  $("plan-invalid").hidden = false;
 }
 
 async function confirmClean() {
@@ -462,7 +484,15 @@ async function confirmClean() {
     renderResult();
     showView("result");
   } catch (error) {
-    showError(error.message);
+    if (error.status === 404 || error.status === 410 || error.status === 0) {
+      invalidateCleanPlan(
+        error.status === 0
+          ? "Resultado incierto: la petición se envió pero no se recibió respuesta. La limpieza pudo ejecutarse. Consulta la papelera y los informes antes de volver a intentarlo."
+          : "El plan ya no es válido (consumido o expirado). Si ya confirmaste, la limpieza pudo ejecutarse: consulta la papelera y los informes. Vuelve a inspeccionar el proyecto para generar un plan nuevo."
+      );
+    } else {
+      showError(error.message);
+    }
   } finally {
     setLoading("clean-loading", false);
     $("btn-cancel-plan").disabled = false;
@@ -806,7 +836,17 @@ async function executeRestore() {
     renderResult();
     showView("result");
   } catch (error) {
-    showError(error.message);
+    if (error.status === 404 || error.status === 410 || error.status === 0) {
+      state.trash.planResp = null;
+      $("restore-confirm").hidden = true;
+      showError(
+        error.status === 0
+          ? "Resultado incierto: la petición se envió pero no se recibió respuesta. La restauración pudo ejecutarse. Consulta la papelera y los informes antes de volver a intentarlo."
+          : "El plan de restauración ya no es válido (consumido o expirado). Si ya confirmaste, la restauración pudo ejecutarse: consulta la papelera y los informes. Vuelve a seleccionar elementos para generar otro plan."
+      );
+    } else {
+      showError(error.message);
+    }
   } finally {
     setLoading("restore-loading", false);
     updateRestoreConfirmButton();
@@ -1087,6 +1127,9 @@ function init() {
   $("btn-generate-plan").addEventListener("click", () => guarded(generatePlan));
 
   $("btn-cancel-plan").addEventListener("click", () => showView("inspect"));
+  $("btn-plan-reinspect").addEventListener("click", () =>
+    guarded(() => inspectProject(state.lastProjectPath))
+  );
   $("permanent-confirm").addEventListener("input", updateConfirmButton);
   $("btn-confirm-clean").addEventListener("click", () => guarded(confirmClean));
 
