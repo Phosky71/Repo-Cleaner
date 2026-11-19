@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", "prompts/clean-repository.md"],
+  "agent": {
+    "repo-cleaner": {
+      "description": "Analiza y limpia artefactos generados de un repositorio de forma segura",
+      "mode": "primary",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true
+      },
+      "permission": {
+        "edit": "ask",
+        "bash": {
+          "rm -rf *": "deny",
+          "git *": "ask",
+          "npm *": "allow",
+          "pnpm *": "allow",
+          "yarn *": "allow"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+reports/
+logs/
+.repo-cleaner-trash/
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

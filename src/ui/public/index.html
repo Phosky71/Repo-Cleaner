@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Repo Cleaner</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <h1>Repo Cleaner</h1>
+      </div>
+      <div class="topbar-meta">
+        <span class="muted">Raíz autorizada:</span>
+        <code id="allowed-root" class="mono">__ALLOWED_ROOT__</code>
+        <button id="btn-open-reports" class="btn btn-ghost">Informes</button>
+        <span
+          id="health-dot"
+          class="health-dot"
+          title="Estado del servidor"
+        ></span>
+      </div>
+    </header>
+
+    <div id="error-banner" class="error-banner" role="alert" hidden></div>
+
+    <main>
+      <!-- 1. Inicio -->
+      <section id="view-home" class="view">
+        <div class="panel">
+          <h2>Escanear proyectos</h2>
+          <p class="muted">
+            Introduce una ruta raíz dentro de la raíz autorizada. El escaneo es
+            de solo lectura: no modifica ni elimina nada.
+          </p>
+          <div class="row">
+            <label class="sr-only" for="root-path">Ruta raíz a escanear</label>
+            <input
+              id="root-path"
+              class="mono input"
+              type="text"
+              value="__ALLOWED_ROOT__"
+              placeholder="C:\Trabajo"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <button id="btn-scan" class="btn btn-primary">Escanear</button>
+          </div>
+          <p id="home-loading" class="loading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            Escaneando… puede tardar en árboles grandes.
+          </p>
+        </div>
+      </section>
+
+      <!-- 2. Proyectos -->
+      <section id="view-projects" class="view" hidden>
+        <div class="view-head">
+          <h2>Proyectos detectados</h2>
+          <div class="row">
+            <button id="btn-rescan" class="btn">Reescanear</button>
+            <button id="btn-back-home" class="btn btn-ghost">
+              Cambiar raíz
+            </button>
+          </div>
+        </div>
+        <p id="projects-summary" class="muted"></p>
+        <div id="projects-empty" class="empty-state" hidden>
+          <p>
+            No se han detectado proyectos en esta ruta. Comprueba que la ruta
+            sea correcta o selecciona otra carpeta raíz.
+          </p>
+          <button id="btn-empty-change-root" class="btn">Cambiar raíz</button>
+        </div>
+        <p id="projects-loading" class="loading" hidden>
+          <span class="spinner" aria-hidden="true"></span> Escaneando…
+        </p>
+        <div id="projects-list" class="cards"></div>
+      </section>
+
+      <!-- 3. Inspección -->
+      <section id="view-inspect" class="view" hidden>
+        <div class="view-head">
+          <h2 id="inspect-title" class="mono"></h2>
+          <div class="row">
+            <button id="btn-open-trash" class="btn">Papelera</button>
+            <button id="btn-back-projects" class="btn btn-ghost">
+              ← Proyectos
+            </button>
+          </div>
+        </div>
+        <div id="inspect-summary" class="chips"></div>
+        <div id="inspect-empty" class="empty-state" hidden>
+          <p>
+            Este proyecto no contiene artefactos detectados. No hay nada que
+            limpiar; puedes volver a proyectos o escanear otra ruta.
+          </p>
+        </div>
+        <div id="inspect-meta" class="chips"></div>
+        <div id="inspect-warnings" class="warning-banner" hidden></div>
+        <div id="inspect-regen" class="panel" hidden>
+          <h3>Regeneración recomendada</h3>
+          <p class="muted">
+            Solo recomendaciones: Repo Cleaner nunca ejecuta estos comandos.
+          </p>
+          <ul id="inspect-regen-list" class="plan-items"></ul>
+        </div>
+        <p id="inspect-loading" class="loading" hidden>
+          <span class="spinner" aria-hidden="true"></span> Inspeccionando…
+        </p>
+
+        <div class="panel">
+          <div class="toolbar">
+            <div class="filters" role="group" aria-label="Filtrar por riesgo">
+              <button class="btn btn-filter active" data-filter="all">
+                Todos <span id="count-all" class="count"></span>
+              </button>
+              <button class="btn btn-filter" data-filter="safe">
+                safe <span id="count-safe" class="count"></span>
+              </button>
+              <button class="btn btn-filter" data-filter="review">
+                review <span id="count-review" class="count"></span>
+              </button>
+              <button class="btn btn-filter" data-filter="protected">
+                protected <span id="count-protected" class="count"></span>
+              </button>
+            </div>
+            <div class="row">
+              <label class="action-choice">
+                <input type="radio" name="action" value="trash" checked />
+                Papelera
+              </label>
+              <label class="action-choice action-danger">
+                <input type="radio" name="action" value="permanent" />
+                Permanente
+              </label>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="col-check"></th>
+                  <th>Ruta</th>
+                  <th>Tipo</th>
+                  <th>Riesgo</th>
+                  <th>Tamaño</th>
+                  <th>Regla</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody id="artifacts-body"></tbody>
+            </table>
+          </div>
+          <p id="artifacts-empty" class="muted" hidden>
+            Ningún elemento coincide con el filtro actual. Prueba otro filtro o
+            selecciona “Todos”.
+          </p>
+
+          <div class="toolbar toolbar-bottom">
+            <div class="row">
+              <button id="btn-select-safe" class="btn">Seleccionar safe</button>
+              <button id="btn-clear-selection" class="btn">
+                Deseleccionar todo
+              </button>
+            </div>
+            <div class="row">
+              <span id="selection-count" class="muted"></span>
+              <button id="btn-generate-plan" class="btn btn-primary" disabled>
+                Generar plan
+              </button>
+            </div>
+          </div>
+          <p id="plan-loading" class="loading" hidden>
+            <span class="spinner" aria-hidden="true"></span> Generando plan…
+          </p>
+        </div>
+      </section>
+
+      <!-- 3b. Papelera y restauración -->
+      <section id="view-trash" class="view" hidden>
+        <div class="view-head">
+          <h2>Papelera local</h2>
+          <button id="btn-trash-back" class="btn btn-ghost">
+            ← Volver al proyecto
+          </button>
+        </div>
+        <p id="trash-loading" class="loading" hidden>
+          <span class="spinner" aria-hidden="true"></span> Cargando sesiones…
+        </p>
+        <div class="row row-end">
+          <button id="btn-trash-purge" class="btn btn-danger" hidden>
+            Purgar sesiones completadas
+          </button>
+        </div>
+        <div id="purge-confirm" class="panel" hidden>
+          <h3>Confirmar purga de sesiones</h3>
+          <div id="purge-summary" class="chips"></div>
+          <p class="muted">
+            Esta acción elimina las sesiones de papelera seleccionadas y sus
+            elementos almacenados. El registro de auditoría se conserva.
+          </p>
+          <div class="row row-end">
+            <button id="btn-purge-cancel" class="btn">Cancelar</button>
+            <button id="btn-purge-execute" class="btn btn-danger">
+              Confirmar purga
+            </button>
+          </div>
+        </div>
+        <p id="purge-result" class="muted" hidden></p>
+        <div id="trash-sessions" class="cards"></div>
+
+        <div id="trash-detail" hidden>
+          <div class="view-head">
+            <h3 id="trash-session-title" class="mono"></h3>
+          </div>
+          <div id="trash-session-summary" class="chips"></div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th class="col-check"></th>
+                    <th>Ruta</th>
+                    <th>Tamaño</th>
+                    <th>Riesgo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="trash-items-body"></tbody>
+              </table>
+            </div>
+            <div class="toolbar toolbar-bottom">
+              <div class="row">
+                <button id="btn-trash-select-all" class="btn">
+                  Seleccionar restaurables
+                </button>
+                <button id="btn-trash-clear" class="btn">
+                  Deseleccionar todo
+                </button>
+                <label class="action-choice">
+                  Conflicto:
+                  <select id="trash-conflict-mode" class="input">
+                    <option value="cancel" selected>Cancelar</option>
+                    <option value="suffix">Sufijo único</option>
+                    <option value="overwrite">Sobrescribir</option>
+                  </select>
+                </label>
+              </div>
+              <div class="row">
+                <span id="trash-selection-count" class="muted"></span>
+                <button id="btn-restore-plan" class="btn btn-primary" disabled>
+                  Restaurar selección
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="restore-confirm" class="panel" hidden>
+            <h3>Confirmar restauración</h3>
+            <div id="restore-plan-summary" class="chips"></div>
+            <div
+              id="restore-overwrite-warning"
+              class="warning-banner warning-danger"
+              hidden
+            >
+              ⚠ Se sobrescribirán rutas existentes de forma irreversible.
+              Escribe <strong>OVERWRITE</strong> para autorizarlo.
+            </div>
+            <ul id="restore-overwrite-list" class="plan-items" hidden></ul>
+            <input
+              id="restore-overwrite-input"
+              class="mono input"
+              type="text"
+              hidden
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <div class="row row-end">
+              <button id="btn-restore-cancel" class="btn">Cancelar</button>
+              <button id="btn-restore-execute" class="btn btn-primary" disabled>
+                Confirmar restauración
+              </button>
+            </div>
+          </div>
+          <p id="restore-loading" class="loading" hidden>
+            <span class="spinner" aria-hidden="true"></span> Restaurando…
+          </p>
+        </div>
+      </section>
+
+      <!-- 3c. Informes históricos -->
+      <section id="view-reports" class="view" hidden>
+        <div class="view-head">
+          <h2>Informes históricos</h2>
+          <div class="row">
+            <button id="btn-reports-refresh" class="btn">Actualizar</button>
+            <button id="btn-reports-back" class="btn btn-ghost">
+              ← Volver
+            </button>
+          </div>
+        </div>
+        <p id="reports-loading" class="loading" hidden>
+          <span class="spinner" aria-hidden="true"></span> Cargando informes…
+        </p>
+        <p id="reports-empty" class="muted" hidden>
+          No hay informes históricos todavía. Ejecuta un escaneo, inspección,
+          limpieza, restauración o purga de papelera para generar el primero.
+        </p>
+        <div id="reports-list" class="panel">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Proyecto</th>
+                  <th>Resumen</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="reports-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="report-detail" class="panel" hidden>
+          <div class="view-head">
+            <h3 id="report-detail-title" class="mono"></h3>
+            <button id="btn-report-detail-back" class="btn btn-ghost">
+              ← Volver al listado
+            </button>
+          </div>
+          <pre id="report-detail-content" class="report-pre"></pre>
+        </div>
+      </section>
+
+      <!-- 4. Plan -->
+      <section id="view-plan" class="view" hidden>
+        <div class="view-head">
+          <h2>Revisar plan de limpieza</h2>
+          <button id="btn-cancel-plan" class="btn btn-ghost">Cancelar</button>
+        </div>
+        <div id="plan-summary" class="chips"></div>
+        <p id="plan-action-note" class="muted"></p>
+        <div id="plan-warning" class="warning-banner warning-danger" hidden>
+          ⚠ Eliminación PERMANENTE: los elementos no pasarán por la papelera y
+          no podrán restaurarse.
+        </div>
+        <div class="panel">
+          <ul id="plan-items" class="plan-items"></ul>
+        </div>
+        <div id="permanent-confirm-wrap" class="panel" hidden>
+          <label for="permanent-confirm">
+            Escribe <strong>PERMANENTE</strong> para confirmar la eliminación
+            irreversible:
+          </label>
+          <input
+            id="permanent-confirm"
+            class="mono input"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </div>
+        <div class="row row-end">
+          <button id="btn-confirm-clean" class="btn btn-danger" disabled>
+            Confirmar limpieza
+          </button>
+        </div>
+        <p id="clean-loading" class="loading" hidden>
+          <span class="spinner" aria-hidden="true"></span> Ejecutando limpieza
+          auditada…
+        </p>
+      </section>
+
+      <!-- 5. Resultado -->
+      <section id="view-result" class="view" hidden>
+        <div class="view-head">
+          <h2>Resultado de la limpieza</h2>
+        </div>
+        <div id="result-stats" class="chips"></div>
+        <div id="result-git" class="git-note" hidden></div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Ruta</th>
+                  <th>Riesgo</th>
+                  <th>Acción</th>
+                  <th>Resultado</th>
+                  <th>Tamaño</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody id="result-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="row">
+            <a id="download-json" class="btn" download>Descargar JSON</a>
+            <a id="download-md" class="btn" download>Descargar Markdown</a>
+          </div>
+          <div class="row">
+            <button id="btn-back-to-project" class="btn">
+              Volver al proyecto
+            </button>
+            <button id="btn-back-to-projects" class="btn btn-ghost">
+              Volver a proyectos
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer muted">
+      Servidor local en 127.0.0.1 · Solo lectura hasta confirmación explícita ·
+      Papelera y auditoría por defecto
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "createdAt": "2026-11-17T21:43:10.795Z",
+  "reason": "Retirada del legacy v0 — Fase 2 de docs/PLAN.md (autorizado)",
+  "files": [
+    {
+      "originalPath": "src/index.ts",
+      "backupPath": "src/index.ts",
+      "sha256": "a6dbbb55f068877c4cf06f896503e2d829b19d9ceb574065408bb9182caf7171",
+      "sizeBytes": 1227
+    },
+    {
+      "originalPath": "src/scanner.ts",
+      "backupPath": "src/scanner.ts",
+      "sha256": "cf379b35d36aa608e902170d6af8d4ba2704a818e1d7dbef4ffaf0df070dfb43",
+      "sizeBytes": 2759
+    },
+    {
+      "originalPath": "src/rules.ts",
+      "backupPath": "src/rules.ts",
+      "sha256": "a9b81eb0649d0616ec6a468ec208a8b0e1a2fd77579ba789a6713140b387a987",
+      "sizeBytes": 1273
+    },
+    {
+      "originalPath": "src/cleaner.ts",
+      "backupPath": "src/cleaner.ts",
+      "sha256": "2b14cfe85f4dbfb561489394340cb3ca844b08eb75fe32427fe63675b805af70",
+      "sizeBytes": 1718
+    },
+    {
+      "originalPath": "src/report.ts",
+      "backupPath": "src/report.ts",
+      "sha256": "c5f064d33f016d1d14b691115c78d1c9f38efd2e3f338a0125b9affac5c43a3e",
+      "sizeBytes": 898
+    },
+    {
+      "originalPath": "src/config.ts",
+      "backupPath": "src/config.ts",
+      "sha256": "74b17cd050c11dcc84ae17b9f583dc206c641874162a5e8bf799376bae185ccd",
+      "sizeBytes": 791
+    },
+    {
+      "originalPath": "src/utils.ts",
+      "backupPath": "src/utils.ts",
+      "sha256": "9f694953a81ef73bfe4a897553acc81363c5bd7b07b2346ee7e7b9057a487bb3",
+      "sizeBytes": 1052
+    }
+  ]
+}

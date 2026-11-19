@@ -1,0 +1,66 @@
+{
+  "name": "repo-cleaner",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "CLI y UI local segura para detectar, limpiar, restaurar y auditar artefactos de build en repositorios (Meridian)",
+  "keywords": [
+    "repo-cleaner",
+    "cleanup",
+    "artifacts",
+    "node_modules",
+    "trash",
+    "restore",
+    "audit",
+    "cli",
+    "meridian",
+    "operia"
+  ],
+  "license": "UNLICENSED",
+  "files": [
+    "dist",
+    "config",
+    "README.md"
+  ],
+  "bin": {
+    "repo-cleaner": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/copy-ui-assets.mjs",
+    "verify:package": "node scripts/verify-package.mjs",
+    "dev": "tsx src/cli/index.ts",
+    "scan": "tsx src/cli/index.ts scan",
+    "inspect": "tsx src/cli/index.ts inspect",
+    "clean": "tsx src/cli/index.ts clean",
+    "ui": "tsx src/cli/index.ts ui",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.9",
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.2",
+    "hono": "^4.6.0",
+    "ignore": "^7.0.16",
+    "picomatch": "^4.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.10.2",
+    "@types/picomatch": "^4.0.3",
+    "eslint": "^10.15.0",
+    "prettier": "^3.4.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
