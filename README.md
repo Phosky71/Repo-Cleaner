@@ -6,6 +6,8 @@ Forma parte de **Meridian**, un gestor de proyectos pensado para desarrolladores
 
 Repo Cleaner detecta builds, cachés, dependencias reinstalables y archivos temporales, muestra un plan claro y solicita confirmación humana antes de eliminar nada.
 
+[![CI](https://github.com/Phosky71/Repo-Cleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/Phosky71/Repo-Cleaner/actions/workflows/ci.yml)
+
 ## Características
 
 - Escaneo de una carpeta raíz y detección de proyectos en subcarpetas.
