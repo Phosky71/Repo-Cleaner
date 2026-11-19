@@ -1,221 +1,224 @@
 # Repo Cleaner
 
-**Módulo de gestión y limpieza de proyectos de Meridian.** CLI y UI local
-segura para detectar, clasificar, limpiar, restaurar y auditar artefactos de
-build en repositorios de desarrollo, sin perder nunca trabajo valioso.
+Repo Cleaner es una herramienta de línea de comandos y aplicación web local para escanear, inspeccionar y limpiar proyectos de desarrollo de forma segura.
 
-- **Versión:** 0.4.0 · **Licencia:** UNLICENSED (uso interno de Operia, no
-  publicado en npm).
-- **Estado:** Fases 1–5 completadas (núcleo seguro, limpieza con
-  human-in-the-loop, papelera y restauración, UI web local, reglas por tipo
-  de proyecto, empaquetado y documentación).
+Forma parte de **Meridian**, un gestor de proyectos pensado para desarrolladores. Su objetivo es mantener tus repositorios limpios sin eliminar código fuente, configuración, secretos, documentación ni trabajo importante.
 
-## Propósito
+Repo Cleaner detecta builds, cachés, dependencias reinstalables y archivos temporales, muestra un plan claro y solicita confirmación humana antes de eliminar nada.
 
-Mantener limpios los proyectos de desarrollo: recuperar espacio eliminando
-únicamente artefactos regenerables (`node_modules`, `dist`, `target`,
-`__pycache__`, `.venv`…), con clasificación por riesgo, confirmación humana
-obligatoria, papelera local reversible y auditoría completa.
+## Características
 
-## Características principales
+- Escaneo de una carpeta raíz y detección de proyectos en subcarpetas.
+- Inspección profunda de un proyecto.
+- Detección de artefactos de build, cachés, dependencias y temporales.
+- Clasificación `safe`, `review` y `protected`.
+- Human-in-the-loop obligatorio antes de eliminar.
+- Papelera local reversible.
+- Restauración desde papelera (con gestión de conflictos).
+- Purga controlada de sesiones completadas.
+- Auditoría JSONL de cada acción.
+- Informes JSON y Markdown.
+- Interfaz web local minimalista (solo `127.0.0.1`).
+- Reglas configurables.
+- Reglas por tipo de proyecto.
+- Reglas negadas (exclusiones).
+- Detección de lenguajes, gestores de paquetes y frameworks.
+- Comandos de regeneración recomendados, sin ejecutarlos automáticamente.
 
-- Escaneo de una ruta raíz (p. ej. `C:\Trabajo`) con detección de proyectos
-  en subcarpetas: Node.js, TypeScript, Python, Rust, Go, Java/Gradle, Maven,
-  .NET (C#/F#/VB.NET/MAUI), PHP, Ruby.
-- Metadatos por proyecto: lenguajes, gestores de paquetes, frameworks,
-  comandos de regeneración recomendados (nunca se ejecutan), estado Git
-  (solo lectura).
-- Clasificación de artefactos: **safe / review / protected**.
-- Limpieza con plan previo, selección individual o por categorías y
-  confirmación explícita; papelera local por defecto; borrado permanente
-  solo con elección explícita.
-- Restauración desde papelera con gestión de conflictos (cancelar / sufijo
-  único / sobrescribir con autorización adicional).
-- Purga de sesiones de papelera completadas (nunca con pendientes).
-- Reglas configurables (`config/rules.json`), reglas por tipo de proyecto y
-  negaciones (`!ruta`).
-- Auditoría JSONL de cada acción e informes JSON + Markdown.
-- Interfaz web local minimalista (Hono + HTML/CSS/JS vanilla) en
-  `127.0.0.1`, con informes históricos.
-- 216 tests (Vitest), TypeScript estricto, ESLint 10, Prettier.
+## Problemas que resuelve
+
+- Disco lleno de `node_modules`, `dist`, `target`, `.venv` y cachés en decenas de proyectos.
+- Miedo a borrar algo valioso: clasificación conservadora, protecciones innegociables y papelera reversible.
+- Falta de trazabilidad: informes y auditoría de cada movimiento, borrado, restauración o purga.
+- Limpiezas a ciegas: nunca se elimina nada sin plan previo y confirmación explícita.
 
 ## Requisitos
 
 - Node.js ≥ 20 (probado con Node 24) y npm.
-- Windows, macOS o Linux (desarrollado y verificado en Windows).
-- Git opcional: solo se usa en modo lectura (`git status --short`) para la
-  verificación posterior a la limpieza.
+- Windows, macOS o Linux.
+- Git opcional: solo se usa en modo lectura (`git status --short`) para verificar el estado tras limpiar.
 
-## Instalación local
+## Instalación
 
 ```bash
-cd C:\Trabajo\Operia\repo-cleaner
+git clone https://github.com/Phosky71/Repo-Cleaner.git
+cd Repo-Cleaner
 npm install
 npm run build
-npm link          # instala el comando global repo-cleaner
+npm link
 ```
 
-Verificación del empaquetado (build, entrypoint, UI, reglas, comando global,
-servidor local y tests):
+`npm link` instala el comando global `repo-cleaner`. Verifica la instalación con `npm run verify:package` (8 comprobaciones). Para retirarlo: `npm unlink -g repo-cleaner`.
+
+## Uso rápido
 
 ```bash
-npm run verify:package
-```
-
-Para retirar el comando global: `npm unlink -g repo-cleaner`.
-
-## Comandos disponibles
-
-```bash
-repo-cleaner scan <ruta-raiz>          # detecta proyectos y artefactos (solo lectura)
-repo-cleaner inspect <ruta-proyecto>   # análisis profundo + informe (solo lectura)
-repo-cleaner clean <ruta-proyecto>     # plan + confirmación + papelera
-repo-cleaner ui <ruta-raiz>            # interfaz web en http://127.0.0.1:4321
-repo-cleaner restore <ruta-proyecto>   # restaura desde la papelera local
-repo-cleaner trash <ruta-proyecto>     # gestiona/purga sesiones de papelera
-repo-cleaner rules                     # muestra las reglas cargadas
-```
-
-Opciones comunes: `--config <ruta>` (reglas), `--reports-dir <dir>`,
-`--audit-path <fichero>` (clean/restore/trash), `--dry-run`, `--yes`.
-`scan`/`inspect`: `--verbose`. `clean`: `--permanent`, `--include-review`,
-`--only <rutas...>`, `--exclude <rutas...>`, `--trash-dir <dir>`.
-`restore`: `--session <timestamp>`, `--only <rutas...>`, `--all`,
-`--on-conflict cancel|suffix|overwrite`. `trash`: `--session <timestamp>`,
-`--remove`, `--remove-completed`. `ui`: `--port <n>`.
-
-## Ejemplos reales
-
-```bash
-# Escanear todos los proyectos de C:\Trabajo
-repo-cleaner scan C:\Trabajo --verbose
-
-# Inspeccionar un proyecto concreto
-repo-cleaner inspect C:\Trabajo\Operia\repo-cleaner
-
-# Ver el plan de limpieza sin tocar nada
-repo-cleaner clean C:\Trabajo\MiProyecto --dry-run
-
-# Limpieza interactiva (papelera por defecto)
+repo-cleaner scan C:\Trabajo
+repo-cleaner inspect C:\Trabajo\MiProyecto
 repo-cleaner clean C:\Trabajo\MiProyecto
-
-# Selección concreta y automatización consciente
-repo-cleaner clean C:\Trabajo\MiProyecto --only dist node_modules --yes
-
-# Restaurar todo lo movido a la papelera
-repo-cleaner restore C:\Trabajo\MiProyecto --all
-
-# Purgar solo sesiones completadas
-repo-cleaner trash C:\Trabajo\MiProyecto --remove-completed
-
-# Interfaz web
-repo-cleaner ui C:\Trabajo --port 5000
+repo-cleaner ui C:\Trabajo
+repo-cleaner restore C:\Trabajo\MiProyecto
+repo-cleaner trash C:\Trabajo\MiProyecto
+repo-cleaner rules
 ```
 
-Sin `npm link`, todo funciona igual con `npm run dev -- <comando> ...`
-(p. ej. `npm run dev -- scan C:\Trabajo`).
+Sin `npm link`, todo funciona con `npm run dev -- <comando> ...`.
 
-## Niveles de riesgo
+| Comando              | Función                                                                                       |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| `scan <ruta-raíz>`   | Detecta proyectos y artefactos (solo lectura)                                                 |
+| `inspect <proyecto>` | Análisis profundo: tipos, lenguajes, gestores, frameworks, Git, artefactos con motivo y regla |
+| `clean <proyecto>`   | Plan + selección + confirmación + papelera                                                    |
+| `ui <ruta-raíz>`     | Interfaz web local (`--port` configurable)                                                    |
+| `restore <proyecto>` | Restaura desde la papelera (`--session`, `--only`, `--all`, `--on-conflict`)                  |
+| `trash <proyecto>`   | Lista/inspecciona sesiones y purga las completadas (`--remove`, `--remove-completed`)         |
+| `rules`              | Muestra las reglas cargadas                                                                   |
 
-| Nivel                | Significado                                           | Comportamiento                                                                  |
-| -------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **safe** (verde)     | Regenerable mediante build, test o gestor de paquetes | Incluido en el plan por defecto; se mueve a la papelera tras confirmación       |
-| **review** (ámbar)   | Grande, ambiguo, binario o potencialmente valioso     | Solo con selección humana explícita (`--only`, `--include-review` o checkboxes) |
-| **protected** (rojo) | Nunca eliminable                                      | Bloqueado en todas las capas; ni siquiera con reglas debilitadas                |
+Opciones destacadas de `clean`: `--dry-run` (solo plan), `--yes` (automatización consciente), `--permanent` (borrado definitivo con confirmación reforzada), `--include-review`, `--only <rutas...>`, `--exclude <rutas...>`, `--trash-dir`, `--config`, `--audit-path`, `--reports-dir`.
 
-Reglas clave: lo desconocido nunca es safe; un safe no ignorado por
-`.gitignore` se degrada a review; un conflicto safe+review se resuelve como
-review; `.vs` es siempre review.
+Ejemplo de flujo seguro:
 
-## Papelera local
+```bash
+repo-cleaner clean C:\Trabajo\MiProyecto --dry-run   # 1. revisar el plan
+repo-cleaner clean C:\Trabajo\MiProyecto             # 2. confirmar y mover a papelera
+repo-cleaner restore C:\Trabajo\MiProyecto --all     # 3. deshacer si hace falta
+```
 
-Por defecto, limpiar **mueve** los elementos a
-`<proyecto>/.repo-cleaner-trash/<timestamp>/`, con `manifest.json` (ruta
-original absoluta y relativa, fecha, tamaño, riesgo, acción, motivo y hash
-SHA-256 del plan) y los elementos en `items/`. Es reversible: `restore`
-devuelve cada elemento a su ruta original. Las sesiones se conservan como
-evidencia hasta que el usuario las purga explícitamente.
+## Interfaz web
+
+```bash
+repo-cleaner ui C:\Trabajo
+```
+
+Abre:
+
+```text
+http://127.0.0.1:4321
+```
+
+Flujo:
+
+```text
+Escanear → Inspeccionar → Seleccionar artefactos → Generar plan → Confirmar → Papelera → Restaurar
+```
+
+La UI incluye filtros por riesgo, selección individual y por categorías, metadatos del proyecto, advertencias, confirmaciones reforzadas (escribir `PERMANENTE` o `OVERWRITE`), vista de papelera con restauración y purga, e histórico de informes con apertura y descarga JSON/Markdown. Diseño oscuro, minimalista, HTML/CSS/JS vanilla, CSP estricta y `textContent` (sin frameworks).
+
+## Seguridad
+
+- El modo por defecto es seguro: `scan` e `inspect` son de solo lectura; nada se elimina sin confirmación humana explícita.
+- La papelera local es el comportamiento por defecto; el borrado permanente (`--permanent`) requiere confirmación reforzada.
+- `.git`, `.env`, claves, certificados, código fuente, tests, documentación, bases de datos y backups **nunca** se eliminan.
+- Las rutas fuera del target y los `..` están bloqueados en todas las capas.
+- Los symlinks y junctions no se siguen ni se eliminan.
+- Cada acción queda registrada en auditoría.
+- Los planes tienen TTL (15 min) y consumo único garantizado bajo concurrencia.
+- El servidor web escucha solo en `127.0.0.1`, valida Host/Origin y no ejecuta comandos arbitrarios.
+
+Modelo completo: [`docs/SAFETY.md`](docs/SAFETY.md).
+
+## Papelera y restauración
+
+Al limpiar, los elementos se mueven a `<proyecto>/.repo-cleaner-trash/<timestamp>/` con un `manifest.json` (ruta original, relativa, almacenada, fecha, tamaño, riesgo, acción, motivo y hash SHA-256 del plan). `restore` los devuelve a su ruta original; si el destino ya existe, elige entre cancelar, sufijo único (`nombre.restored-<timestamp>`) o sobrescribir con autorización adicional. Las sesiones se conservan como evidencia hasta que las purgas explícitamente (`trash --remove-completed` solo elimina sesiones sin elementos pendientes de restaurar).
 
 ## Auditoría
 
-Cada acción (limpieza, restauración, purga) se registra en
-`logs/clean-audit.jsonl` (una línea JSON por acción: timestamp, target,
-ruta relativa, riesgo, acción, tamaño, `approvedBy: "human"`, planId,
-sessionId, resultado). Solo metadatos: nunca contenido de ficheros ni
-secretos. El registro se conserva aunque se purgue la sesión.
+Cada acción se registra en `logs/clean-audit.jsonl` (una línea JSON por acción: timestamp, target, ruta relativa, riesgo, acción, tamaño, `approvedBy: "human"`, planId, sessionId y resultado). Solo metadatos: nunca contenido de ficheros ni secretos. El registro se conserva aunque se purgue la sesión.
 
 ## Informes
 
-Cada operación genera informe **JSON y Markdown** en `reports/`:
-`root-scan-*` (escaneo de raíz), `scan-*` (inspección), `clean-*`,
-`restore-*`, `trash-*`. La UI muestra el histórico y permite abrirlos y
-descargarlos (solo lectura).
+Cada operación genera informe JSON y Markdown en `reports/`: `root-scan-*`, `scan-*` (inspect), `clean-*`, `restore-*`, `trash-*`. La UI muestra el histórico y permite abrirlos y descargarlos (solo lectura).
 
-## Reglas personalizadas
+## Reglas
 
-`config/rules.json` define `defaults` (modo, papelera, `maxDepth`,
-`largeThresholdMB`), las listas `safe`, `review`, `protected`,
-`projectRules` y `safeNegations`. Sin archivo, se usan las reglas internas.
-La validación rechaza patrones peligrosos y **nunca permite debilitar las
-protecciones internas**.
+`config/rules.json` define el comportamiento:
 
-### Negaciones
+- `safe`: artefactos regenerables (build, test, gestor de paquetes).
+- `review`: grandes, ambiguos, binarios o potencialmente valiosos; solo con selección humana explícita.
+- `protected`: nunca eliminables.
+- `safeNegations`: exclusiones con prefijo `!` que fuerzan `review`.
+- `projectRules`: reglas que solo aplican cuando el tipo de proyecto se detecta con confianza.
+
+Ejemplo real:
 
 ```json
 {
-  "safeNegations": [
-    "!dist/manifest.json",
-    "!node_modules/.cache/important-data"
-  ]
+  "version": 1,
+  "defaults": {
+    "mode": "dry-run",
+    "useTrash": true,
+    "maxDepth": 6,
+    "largeThresholdMB": 100
+  },
+  "safe": ["node_modules", "dist", "*.log"],
+  "review": ["*.zip", "*.bin", ".vs"],
+  "protected": [".git", ".env", "src", "docs"],
+  "projectRules": {
+    "dotnet": { "safe": ["bin", "obj"], "safeNegations": [] }
+  },
+  "safeNegations": ["!dist/manifest.json"]
 }
 ```
 
-Una negación fuerza `review` de la ruta excluida y degrada el directorio
-safe que la contiene. Jamás debilita una ruta protegida.
+Una negación **nunca puede debilitar una ruta protegida**: la prioridad es protected > negación > review > safe, y las protecciones internas se fusionan siempre con las del usuario. `bin`/`obj` solo son safe en proyectos .NET detectados; en otros contextos son review. Lo desconocido nunca es safe; un safe no ignorado por `.gitignore` se degrada a review.
 
-### Reglas por tipo de proyecto
+## Arquitectura
 
-`projectRules` aplica reglas solo cuando el tipo se detecta con confianza
-(marcadores reales). Incluidas: nodejs (cachés de framework), typescript
-(`*.tsbuildinfo`), python (`__pycache__`, `.venv`, `.tox`, `*.egg-info`…),
-rust (`target`), go (`bin`), gradle/maven, dotnet (`bin`/`obj`), php
-(`vendor`), ruby (`.bundle`). Se acepta el alias `node` → `nodejs`. Con
-varios tipos, unión de reglas safe; cualquier conflicto → review.
+```text
+CLI / Web UI
+     │
+     ▼
+Cleaner Service
+     │
+     ├── Scanner
+     ├── Project Detector
+     ├── Rule Engine
+     ├── Safety Guard
+     ├── Trash / Restore
+     ├── Audit
+     └── Report Generator
+```
 
-## Seguridad: qué nunca se elimina
-
-`.git`, `.github`, `.env` y variantes, claves y certificados (`*.pem`,
-`*.key`, `*.p12`, `*.pfx`, `*.crt`, `*.keystore`, `.ssh`…), código fuente
-(`src`, `app`, `lib`), tests, documentación, configuración, bases de datos
-(`*.sqlite`, `*.dump`…), backups, `reports/`, `logs/clean-audit.jsonl` y la
-propia papelera. Nunca rutas fuera del objetivo, nunca `..`, nunca symlinks.
-Sin `rm -rf` genérico ni `git clean`. Modelo completo:
-[`docs/SAFETY.md`](docs/SAFETY.md).
+En código: `src/cli` (Commander), `src/core` (scanner, project-meta, rule-engine, safety, cleaner, trash, trash-admin, restore, audit, git, inspect, report, format), `src/rules` (defaults + loader validado), `src/types`, `src/ui` (servidor Hono + validación + frontend vanilla). TypeScript estricto, ESM, sin dependencias pesadas.
 
 ## Desarrollo
 
 ```bash
 npm install
-npm run dev -- scan .        # CLI en desarrollo (tsx)
-npm run typecheck            # TypeScript estricto (src + tests)
-npm test                     # Vitest (216 tests)
-npm run lint                 # ESLint 10
-npm run format               # Prettier
-npm run build                # tsc + copia de assets UI a dist/
-npm run verify:package       # verificación completa de empaquetado
+npm run dev -- scan .
+npm run typecheck
+npm test
+npm run lint
+npm run format
+npm run build
+npm run verify:package
 ```
 
-Arquitectura: `src/cli` (Commander), `src/core` (scanner, project-meta,
-rule-engine, safety, cleaner, trash, trash-admin, restore, audit, git,
-inspect, report, format), `src/rules` (defaults + loader), `src/types`,
-`src/ui` (servidor Hono + validación + frontend vanilla).
+219 tests (Vitest) cubren scanner, reglas, negaciones, safety guard, limpieza, papelera, restauración, purga, API, UI, concurrencia y empaquetado. ESLint 10 + Prettier.
 
-## Documentación
+## Desarrollo con OpenCode
 
-- [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) — guía práctica de uso diario.
-- [`docs/PLAN.md`](docs/PLAN.md) — plan por fases y decisiones técnicas.
-- [`docs/SAFETY.md`](docs/SAFETY.md) — referencia de seguridad.
+Este repositorio está preparado para que [OpenCode](https://opencode.ai) lo entienda, lo use y continúe su desarrollo:
+
+1. `AGENTS.md` contiene las reglas del agente (seguridad pre-commit, ahorro de tokens, estándar Gradle si aplicara).
+2. `opencode.json` configura el agente `repo-cleaner` y sus permisos.
+3. `docs/PLAN.md` contiene el plan por fases, decisiones técnicas y el estado del proyecto.
+4. `docs/SAFETY.md` contiene la política de seguridad completa.
+5. `docs/USER-GUIDE.md` contiene la guía de usuario.
+6. `prompts/continuity.md` contiene el prompt de continuidad para retomar el desarrollo por fases.
+7. Cualquier cambio debe pasar:
+
+```bash
+npm run typecheck
+npm test
+npm run lint
+npm run build
+npm run verify:package
+```
+
+8. No se deben eliminar rutas protegidas ni debilitar la seguridad (las invariantes internas no son negociables).
+9. Los cambios deben ser incrementales y verificados; los commits requieren confirmación humana y el gate `operia-code-gate`.
 
 ## Licencia
 
-UNLICENSED — uso interno de Operia/Meridian. No publicado en npm.
+Este proyecto está distribuido bajo la [MIT License](./LICENSE).

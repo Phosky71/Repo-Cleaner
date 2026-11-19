@@ -79,7 +79,9 @@ describe("consumo único de planes bajo concurrencia", () => {
       )
     );
     const executed = responses.filter((r) => r.status === 200);
-    const rejected = responses.filter((r) => r.status === 409 || r.status === 404);
+    const rejected = responses.filter(
+      (r) => r.status === 409 || r.status === 404
+    );
     expect(executed).toHaveLength(1);
     expect(rejected).toHaveLength(9);
 
@@ -120,9 +122,8 @@ describe("consumo único de planes bajo concurrencia", () => {
       selectedRelativePaths: ["node_modules", "dist", "debug.log"]
     });
     expect(planResponse.status).toBe(200);
-    const planId = (
-      (await planResponse.json()) as { plan: { id: string } }
-    ).plan.id;
+    const planId = ((await planResponse.json()) as { plan: { id: string } })
+      .plan.id;
 
     const responses = await Promise.all(
       Array.from({ length: 10 }, () =>
@@ -130,7 +131,9 @@ describe("consumo único de planes bajo concurrencia", () => {
       )
     );
     const executed = responses.filter((r) => r.status === 200);
-    const rejected = responses.filter((r) => r.status === 409 || r.status === 404);
+    const rejected = responses.filter(
+      (r) => r.status === 409 || r.status === 404
+    );
     expect(executed).toHaveLength(1);
     expect(rejected).toHaveLength(9);
 

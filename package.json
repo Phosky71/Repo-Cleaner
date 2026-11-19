@@ -16,11 +16,12 @@
     "meridian",
     "operia"
   ],
-  "license": "UNLICENSED",
+  "license": "MIT",
   "files": [
     "dist",
     "config",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
     "repo-cleaner": "./dist/cli/index.js"
