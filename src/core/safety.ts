@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { CleanerRuleSet, ProjectType } from "../types/index.js";
 import { DEFAULT_RULES } from "../rules/defaults.js";
@@ -69,4 +70,59 @@ export function assertSafeToDelete(
       `Bloqueado por seguridad (invariante): ${relative} (${invariant.reason})`
     );
   }
+}
+
+export interface DescendantInspection {
+  blocked: boolean;
+  reason: string;
+}
+
+/**
+ * Inspecciona el subárbol de un directorio propuesto para borrado PERMANENTE
+ * buscando descendientes protegidos con las reglas existentes y las
+ * invariantes internas (sin listas paralelas de secretos).
+ * - Solo examina nombres: nunca lee contenido de ficheros.
+ * - No sigue symlinks (fs.rm borra el enlace, no su destino).
+ * - Si la inspección no puede completarse, bloquea la entrada (fail-closed).
+ */
+export async function findProtectedDescendant(
+  absoluteDir: string,
+  rules: CleanerRuleSet,
+  projectTypes?: ProjectType[]
+): Promise<DescendantInspection> {
+  async function walk(dir: string, rel: string): Promise<DescendantInspection> {
+    let dirents;
+    try {
+      dirents = await fs.readdir(dir, { withFileTypes: true });
+    } catch (error) {
+      return {
+        blocked: true,
+        reason: `inspección incompleta: no se pudo leer ${rel || "."} (${error instanceof Error ? error.message : String(error)})`
+      };
+    }
+    for (const dirent of dirents) {
+      if (dirent.isSymbolicLink()) continue;
+      const childRel = rel ? `${rel}/${dirent.name}` : dirent.name;
+      const byRules = classifyPath(childRel, rules, projectTypes);
+      const byInvariant = classifyPath(childRel, DEFAULT_RULES, projectTypes);
+      const hit =
+        byRules.risk === "protected"
+          ? byRules
+          : byInvariant.risk === "protected"
+            ? byInvariant
+            : null;
+      if (hit) {
+        return {
+          blocked: true,
+          reason: `descendiente protegido: ${childRel} (${hit.reason})`
+        };
+      }
+      if (dirent.isDirectory()) {
+        const sub = await walk(path.join(dir, dirent.name), childRel);
+        if (sub.blocked) return sub;
+      }
+    }
+    return { blocked: false, reason: "" };
+  }
+  return walk(absoluteDir, "");
 }

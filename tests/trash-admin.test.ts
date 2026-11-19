@@ -46,7 +46,7 @@ async function trashedFixture(): Promise<Fixture> {
   const auditPath = path.join(aux, "audit.jsonl");
   const reportsDir = path.join(aux, "reports");
   const report = await scanProject(target, testRules());
-  const plan = createCleanPlan(report);
+  const plan = await createCleanPlan(report, testRules());
   const result = await executeCleanPlan(plan, testRules(), { auditPath });
   const sessionId = path.basename(result.trashSessionDir ?? "");
   return { root, target, auditPath, reportsDir, sessionId };
@@ -60,7 +60,7 @@ async function restoreAll(fixture: Fixture): Promise<void> {
 
 async function cleanAgain(fixture: Fixture): Promise<string> {
   const report = await scanProject(fixture.target, testRules());
-  const plan = createCleanPlan(report);
+  const plan = await createCleanPlan(report, testRules());
   const result = await executeCleanPlan(plan, testRules(), {
     auditPath: fixture.auditPath
   });

@@ -39,7 +39,7 @@ async function makeUxFixture(restored: boolean): Promise<UxFixture> {
   const target = path.join(root, "proj-node");
   const auditPath = path.join(aux, "audit.jsonl");
   const report = await scanProject(target, testRules());
-  const plan = createCleanPlan(report);
+  const plan = await createCleanPlan(report, testRules());
   const result = await executeCleanPlan(plan, testRules(), { auditPath });
   const sessionId = path.basename(result.trashSessionDir ?? "");
   if (restored) {

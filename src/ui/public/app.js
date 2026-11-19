@@ -444,6 +444,12 @@ function renderPlan() {
     size.className = "size";
     size.textContent = fmtBytes(item.entry.sizeBytes);
     li.append(pathEl, size);
+    if (item.blocked) {
+      const blocked = document.createElement("span");
+      blocked.className = "reason";
+      blocked.textContent = item.blocked;
+      li.append(blocked);
+    }
     list.append(li);
   }
   updateConfirmButton();
@@ -451,6 +457,10 @@ function renderPlan() {
 
 function updateConfirmButton() {
   if (!state.planResp) {
+    $("btn-confirm-clean").disabled = true;
+    return;
+  }
+  if (!state.planResp.plan.items.some((item) => item.approved)) {
     $("btn-confirm-clean").disabled = true;
     return;
   }

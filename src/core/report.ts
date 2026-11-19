@@ -310,8 +310,9 @@ export function printCleanPlan(plan: CleanPlan, report: ScanReport): void {
   );
   plan.items.forEach((item, index) => {
     const n = String(index + 1).padStart(3);
+    const blocked = item.blocked ? ` [${item.blocked}]` : "";
     console.log(
-      `${n}. ${riskTag(item.entry.risk)} ${item.entry.relativePath} — ${formatBytes(item.entry.sizeBytes)} — ${item.entry.reason}`
+      `${n}. ${riskTag(item.entry.risk)} ${item.entry.relativePath} — ${formatBytes(item.entry.sizeBytes)} — ${item.entry.reason}${blocked}`
     );
   });
   const reviewCount = report.entries.filter((e) => e.risk === "review").length;

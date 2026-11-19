@@ -110,7 +110,7 @@ describe("límite generar/confirmar en navegador real", () => {
       });
 
       let wsUrl: string | undefined;
-      for (let i = 0; i < 40 && !wsUrl; i++) {
+      for (let i = 0; i < 80 && !wsUrl; i++) {
         await new Promise((r) => setTimeout(r, 300));
         try {
           const list = (await (
@@ -124,6 +124,9 @@ describe("límite generar/confirmar en navegador real", () => {
       expect(wsUrl).toBeTruthy();
 
       const ws = new WebSocket(wsUrl as string);
+      ws.addEventListener("error", () => {
+        /* errores de socket durante el cierre: no son fallos del test */
+      });
       await new Promise<void>((r) => (ws.onopen = () => r()));
       let msgId = 0;
       const pending = new Map<

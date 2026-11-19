@@ -113,6 +113,7 @@ La UI incluye filtros por riesgo, selección individual y por categorías, metad
 - `.git`, `.env`, claves, certificados, código fuente, tests, documentación, bases de datos y backups **nunca** se eliminan.
 - Las rutas fuera del target y los `..` están bloqueados en todas las capas.
 - Los symlinks y junctions no se siguen ni se eliminan.
+- El borrado permanente de una carpeta se bloquea si contiene descendientes protegidos (p. ej. un `.env` dentro de `dist`), incluso si se añadió después de generar el plan. La papelera conserva su comportamiento reversible con advertencia.
 - Cada acción queda registrada en auditoría.
 - Los planes tienen TTL (15 min) y consumo único garantizado bajo concurrencia.
 - El servidor web escucha solo en `127.0.0.1`, valida Host/Origin y no ejecuta comandos arbitrarios.

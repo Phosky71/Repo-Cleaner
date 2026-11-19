@@ -51,7 +51,7 @@ async function makeReportsFixture(): Promise<ReportsFixture> {
   );
 
   const scan = await scanProject(target, testRules());
-  const plan = createCleanPlan(scan);
+  const plan = await createCleanPlan(scan, testRules());
   const cleanResult = await executeCleanPlan(plan, testRules(), { auditPath });
   await saveCleanResult(cleanResult, scan, reportsDir);
 

@@ -149,7 +149,7 @@ describe("consumo único de planes bajo concurrencia", () => {
     const fixture = await makeFixtureApp();
     // Preparar papelera mediante el núcleo (una sola limpieza previa).
     const report = await scanProject(fixture.target, testRules());
-    const cleanPlan = createCleanPlan(report);
+    const cleanPlan = await createCleanPlan(report, testRules());
     const cleanResult = await executeCleanPlan(cleanPlan, testRules(), {
       auditPath: fixture.auditPath
     });

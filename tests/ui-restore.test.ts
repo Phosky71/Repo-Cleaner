@@ -37,7 +37,7 @@ async function makeUiFixture(planTtlMs = 60000): Promise<UiFixture> {
   const reportsDir = path.join(aux, "reports");
 
   const report = await scanProject(target, testRules());
-  const plan = createCleanPlan(report);
+  const plan = await createCleanPlan(report, testRules());
   const result = await executeCleanPlan(plan, testRules(), { auditPath });
   const sessionId = path.basename(result.trashSessionDir ?? "");
 

@@ -16,7 +16,7 @@ import type {
   ScanReport
 } from "../types/index.js";
 import { scanProject } from "./scanner.js";
-import { assertSafeToDelete } from "./safety.js";
+import { assertSafeToDelete, findProtectedDescendant } from "./safety.js";
 import { appendAudit } from "./audit.js";
 import { resolveAuditPath } from "./output-paths.js";
 import {
@@ -46,11 +46,12 @@ function normalizeSelector(raw: string): string {
  * - Deduplica anidados: si un directorio y su descendiente están
  *   seleccionados, gana el directorio (evita movimientos imposibles).
  */
-export function createCleanPlan(
+export async function createCleanPlan(
   report: ScanReport,
+  rules: CleanerRuleSet,
   selection: CleanSelection = {},
   action: CleanAction = "trash"
-): CleanPlan {
+): Promise<CleanPlan> {
   const byPath = new Map(report.entries.map((e) => [e.relativePath, e]));
   let candidates = report.entries.filter(
     (e) => e.risk === "safe" || (selection.includeReview && e.risk === "review")
@@ -91,11 +92,25 @@ export function createCleanPlan(
   });
   topLevel.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
 
-  const items: CleanPlanItem[] = topLevel.map((entry) => ({
-    entry,
-    action,
-    approved: true
-  }));
+  const items: CleanPlanItem[] = [];
+  for (const entry of topLevel) {
+    const item: CleanPlanItem = { entry, action, approved: true };
+    // Garantía: un padre no puede permitir el borrado PERMANENTE de
+    // descendientes protegidos. Se bloquea la entrada completa al preparar
+    // el plan y se revalida de nuevo justo antes de ejecutar.
+    if (action === "permanent" && entry.type === "directory") {
+      const inspection = await findProtectedDescendant(
+        entry.absolutePath,
+        rules,
+        report.projectTypes
+      );
+      if (inspection.blocked) {
+        item.approved = false;
+        item.blocked = `Bloqueado: ${inspection.reason}`;
+      }
+    }
+    items.push(item);
+  }
 
   return {
     id: randomUUID(),
@@ -103,7 +118,9 @@ export function createCleanPlan(
     target: report.target,
     projectTypes: report.projectTypes,
     items,
-    totalBytes: items.reduce((acc, item) => acc + item.entry.sizeBytes, 0),
+    totalBytes: items
+      .filter((item) => item.approved)
+      .reduce((acc, item) => acc + item.entry.sizeBytes, 0),
     createdAt: new Date().toISOString()
   };
 }
@@ -157,8 +174,16 @@ export async function executeCleanPlan(
 
     if (!item.approved) {
       skippedCount += 1;
-      items.push({ entry, action: item.action, result: "skipped" });
-      await appendAudit(base, auditPath);
+      items.push({
+        entry,
+        action: item.action,
+        result: "skipped",
+        ...(item.blocked ? { error: item.blocked } : {})
+      });
+      await appendAudit(
+        item.blocked ? { ...base, error: item.blocked } : base,
+        auditPath
+      );
       continue;
     }
 
@@ -202,6 +227,27 @@ export async function executeCleanPlan(
         });
         await appendAudit({ ...base, result: "trashed" }, auditPath);
       } else {
+        // Revalidación justo antes del borrado permanente: un secreto añadido
+        // después de generar el plan también bloquea la entrada padre.
+        if (stat.isDirectory()) {
+          const inspection = await findProtectedDescendant(
+            entry.absolutePath,
+            rules,
+            plan.projectTypes
+          );
+          if (inspection.blocked) {
+            skippedCount += 1;
+            const reason = `Bloqueado: ${inspection.reason}`;
+            items.push({
+              entry,
+              action: item.action,
+              result: "skipped",
+              error: reason
+            });
+            await appendAudit({ ...base, error: reason }, auditPath);
+            continue;
+          }
+        }
         await fs.rm(entry.absolutePath, {
           recursive: true,
           force: false,
@@ -273,7 +319,7 @@ export function applyInteractiveSelection(
     return;
   }
   if (trimmed === "all" || trimmed === "todos") {
-    for (const item of plan.items) item.approved = true;
+    for (const item of plan.items) item.approved = !item.blocked;
     return;
   }
   const numbers = trimmed
@@ -290,7 +336,7 @@ export function applyInteractiveSelection(
     });
   const selected = new Set(numbers);
   plan.items.forEach((item, index) => {
-    item.approved = selected.has(index);
+    item.approved = selected.has(index) && !item.blocked;
   });
 }
 
@@ -318,8 +364,9 @@ export async function cleanRepository(
   printProjectAnalysis(report, false);
 
   const action: CleanAction = options.permanent ? "permanent" : "trash";
-  const plan = createCleanPlan(
+  const plan = await createCleanPlan(
     report,
+    rules,
     {
       includeReview: options.includeReview,
       only: options.only,

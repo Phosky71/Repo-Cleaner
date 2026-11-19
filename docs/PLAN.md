@@ -78,6 +78,11 @@ D2 (experiencia de usuario), E1 (empaquetado) y E2 (documentación final).
     positivos en Windows (System32). Rutas explícitas siempre respetadas.
     CSS: regla global `[hidden] { display: none !important; }` para que los
     indicadores ocultos no queden visibles por `display:flex/grid`.
+14. Borrado permanente de un directorio: inspección completa del subárbol
+    (solo nombres) con reglas vigentes + invariantes; descendiente protegido
+    o inspección incompleta → entrada padre bloqueada (plan y revalidación
+    previa a ejecutar), sin borrado parcial ni flag de escape. Papelera sin
+    cambios. Límite residual: TOCTOU con procesos externos (documentado).
 
 ## Pendiente / futuro (no implementado)
 

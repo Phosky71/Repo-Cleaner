@@ -41,7 +41,7 @@ describe("createCleanPlan", () => {
   it("por defecto solo incluye elementos safe", async () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report);
+    const plan = await createCleanPlan(report, testRules());
     expect(plan.items.length).toBeGreaterThan(0);
     for (const item of plan.items) {
       expect(item.entry.risk).toBe("safe");
@@ -61,7 +61,9 @@ describe("createCleanPlan", () => {
   it("includeReview añade los review; protected nunca aparece", async () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { includeReview: true });
+    const plan = await createCleanPlan(report, testRules(), {
+      includeReview: true
+    });
     const paths = plan.items.map((i) => i.entry.relativePath);
     expect(paths).toContain("datos.bin");
     expect(paths).not.toContain(".git");
@@ -72,7 +74,9 @@ describe("createCleanPlan", () => {
   it("only permite selección individual (incluido review explícito)", async () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { only: ["dist", "datos.bin"] });
+    const plan = await createCleanPlan(report, testRules(), {
+      only: ["dist", "datos.bin"]
+    });
     expect(plan.items.map((i) => i.entry.relativePath).sort()).toEqual([
       "datos.bin",
       "dist"
@@ -83,24 +87,26 @@ describe("createCleanPlan", () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
     for (const protegida of [".git", ".env", "src", "docs", "tests"]) {
-      expect(() => createCleanPlan(report, { only: [protegida] })).toThrow(
-        /protegido/
-      );
+      await expect(
+        createCleanPlan(report, testRules(), { only: [protegida] })
+      ).rejects.toThrow(/protegido/);
     }
   });
 
   it("only rechaza rutas inexistentes en el análisis", async () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
-    expect(() => createCleanPlan(report, { only: ["fantasma"] })).toThrow(
-      /no aparece/
-    );
+    await expect(
+      createCleanPlan(report, testRules(), { only: ["fantasma"] })
+    ).rejects.toThrow(/no aparece/);
   });
 
   it("exclude retira elementos del plan", async () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { exclude: ["dist", "debug.log"] });
+    const plan = await createCleanPlan(report, testRules(), {
+      exclude: ["dist", "debug.log"]
+    });
     const paths = plan.items.map((i) => i.entry.relativePath);
     expect(paths).toContain("node_modules");
     expect(paths).not.toContain("dist");
@@ -111,7 +117,9 @@ describe("createCleanPlan", () => {
     const { target } = await fixture();
     await writeFixtureFile(target, "tmp/node_modules/paquete/index.js", "x");
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { includeReview: true });
+    const plan = await createCleanPlan(report, testRules(), {
+      includeReview: true
+    });
     const paths = plan.items.map((i) => i.entry.relativePath);
     expect(paths).toContain("tmp");
     expect(paths).not.toContain("tmp/node_modules");
@@ -120,7 +128,7 @@ describe("createCleanPlan", () => {
   it("la selección interactiva admite números, all y none", async () => {
     const { target } = await fixture();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report);
+    const plan = await createCleanPlan(report, testRules());
     const total = plan.items.length;
 
     applyInteractiveSelection(plan, "none");
@@ -143,7 +151,7 @@ describe("executeCleanPlan — papelera y auditoría", () => {
     const { target } = await fixture();
     const auditPath = await tempAudit();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report);
+    const plan = await createCleanPlan(report, testRules());
     const result = await executeCleanPlan(plan, testRules(), { auditPath });
 
     expect(result.action).toBe("trash");
@@ -203,7 +211,12 @@ describe("executeCleanPlan — papelera y auditoría", () => {
     const { target } = await fixture();
     const auditPath = await tempAudit();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { only: ["dist"] }, "permanent");
+    const plan = await createCleanPlan(
+      report,
+      testRules(),
+      { only: ["dist"] },
+      "permanent"
+    );
     const result = await executeCleanPlan(plan, testRules(), { auditPath });
 
     expect(result.action).toBe("permanent");
@@ -249,7 +262,9 @@ describe("executeCleanPlan — papelera y auditoría", () => {
     const { target } = await fixture();
     const auditPath = await tempAudit();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { only: ["datos.bin"] });
+    const plan = await createCleanPlan(report, testRules(), {
+      only: ["datos.bin"]
+    });
     const result = await executeCleanPlan(plan, testRules(), { auditPath });
     expect(result.executedCount).toBe(1);
     expect(result.failedCount).toBe(0);
@@ -263,7 +278,7 @@ describe("executeCleanPlan — papelera y auditoría", () => {
     const { target } = await fixture();
     const auditPath = await tempAudit();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report);
+    const plan = await createCleanPlan(report, testRules());
     plan.items.forEach((item, index) => {
       item.approved = index === 0;
     });
@@ -287,7 +302,7 @@ describe("executeCleanPlan — papelera y auditoría", () => {
     const { target } = await fixture();
     const auditPath = await tempAudit();
     const report = await scanProject(target, testRules());
-    const plan = createCleanPlan(report, { only: ["dist"] });
+    const plan = await createCleanPlan(report, testRules(), { only: ["dist"] });
     await fs.rm(path.join(target, "dist"), { recursive: true });
     const result = await executeCleanPlan(plan, testRules(), { auditPath });
     expect(result.skippedCount).toBe(1);

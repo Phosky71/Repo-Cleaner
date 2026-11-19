@@ -145,6 +145,8 @@ export interface CleanPlanItem {
   entry: ScanEntry;
   action: CleanAction;
   approved: boolean;
+  /** Motivo de bloqueo (p. ej. descendiente protegido en borrado permanente). */
+  blocked?: string;
 }
 
 export interface CleanPlan {

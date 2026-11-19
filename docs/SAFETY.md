@@ -73,6 +73,20 @@ el plan (UI). Confirmación adicional escribiendo `PERMANENTE`. La acción de
 ejecución debe coincidir con la del plan. `fs.rm` dirigido por elemento
 tras el guard; nunca `rm -rf` genérico.
 
+**Garantía de descendientes protegidos (v0.4.0):** un directorio propuesto
+para borrado permanente se inspecciona por completo (solo nombres, nunca
+contenido) buscando descendientes protegidos con las reglas vigentes y las
+invariantes internas. Si existe alguno —o la inspección no puede
+completarse— se bloquea la entrada padre completa, sin borrado parcial, al
+preparar el plan y de nuevo justo antes de ejecutar (un secreto añadido
+después del plan también bloquea). El bloqueo se registra como `skipped`
+con motivo en la auditoría; nunca como eliminación exitosa. No existe flag
+para saltarse esta protección. La papelera conserva su comportamiento
+(reversible, con advertencia). Límite residual documentado: carrera TOCTOU
+con procesos externos que creen un secreto entre la inspección y el `fs.rm`
+(ventana de milisegundos); no eliminable por completo sin bloqueos del SO.
+Coste: recorrido O(entradas) del subárbol con `readdir` (sin leer ficheros).
+
 ## 10. Auditoría
 
 `logs/clean-audit.jsonl`: una línea JSON por acción con timestamp, target,

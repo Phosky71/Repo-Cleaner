@@ -228,7 +228,7 @@ export function createServer(options: UiServerOptions): Hono {
     let plan: CleanPlan;
     try {
       // createCleanPlan rechaza rutas protegidas y desconocidas.
-      plan = createCleanPlan(report, { only: selected }, action);
+      plan = await createCleanPlan(report, rules, { only: selected }, action);
     } catch (error) {
       throw new ApiError(
         400,
