@@ -72,6 +72,12 @@ D2 (experiencia de usuario), E1 (empaquetado) y E2 (documentación final).
     `legacy/v0-backup-20261117-214310/` (evidencia conservada).
 12. Detección de frameworks/lenguajes solo con evidencia real; comandos de
     regeneración son recomendaciones, nunca se ejecutan.
+13. Salidas por defecto (`reports/`, `logs/`) en el cwd si es escribible;
+    si no, fallback a `~/.repo-cleaner/`. La comprobación es una sonda de
+    escritura real (mkdtemp+rm), porque `accessSync(W_OK)` da falsos
+    positivos en Windows (System32). Rutas explícitas siempre respetadas.
+    CSS: regla global `[hidden] { display: none !important; }` para que los
+    indicadores ocultos no queden visibles por `display:flex/grid`.
 
 ## Pendiente / futuro (no implementado)
 

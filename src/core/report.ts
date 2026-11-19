@@ -15,6 +15,7 @@ import type {
   TrashSessionInfo
 } from "../types/index.js";
 import { formatBytes, formatDate, formatTypes } from "./format.js";
+import { resolveReportsDir } from "./output-paths.js";
 
 function stamp(iso: string): string {
   return iso.replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
@@ -197,9 +198,9 @@ async function writeReports(
   baseName: string,
   json: unknown,
   markdown: string,
-  reportsDir: string
+  reportsDir?: string
 ): Promise<ReportPaths> {
-  const dir = path.resolve(reportsDir);
+  const dir = resolveReportsDir(reportsDir);
   await fs.mkdir(dir, { recursive: true });
   const jsonPath = path.join(dir, `${baseName}.json`);
   const markdownPath = path.join(dir, `${baseName}.md`);
@@ -211,7 +212,7 @@ async function writeReports(
 /** Guarda el informe de raíz en JSON y Markdown dentro de `reports/`. */
 export async function saveRootScanReport(
   report: RootScanReport,
-  reportsDir = "reports"
+  reportsDir?: string
 ): Promise<ReportPaths> {
   const baseName = `root-scan-${stamp(report.generatedAt)}-${report.id.slice(0, 8)}`;
   return writeReports(baseName, report, rootScanMarkdown(report), reportsDir);
@@ -220,7 +221,7 @@ export async function saveRootScanReport(
 /** Guarda el informe de un proyecto en JSON y Markdown dentro de `reports/`. */
 export async function saveScanReport(
   report: ScanReport,
-  reportsDir = "reports"
+  reportsDir?: string
 ): Promise<ReportPaths> {
   const baseName = `scan-${stamp(report.generatedAt)}-${report.id.slice(0, 8)}`;
   return writeReports(
@@ -383,7 +384,7 @@ function cleanResultMarkdown(result: CleanResult, scan: ScanReport): string {
 export async function saveCleanResult(
   result: CleanResult,
   scan: ScanReport,
-  reportsDir = "reports"
+  reportsDir?: string
 ): Promise<ReportPaths> {
   const baseName = `clean-${stamp(result.finishedAt)}-${result.id.slice(0, 8)}`;
   return writeReports(
@@ -514,7 +515,7 @@ function restoreResultMarkdown(result: RestoreResult): string {
 /** Guarda el informe final de restauración (JSON + Markdown). */
 export async function saveRestoreResult(
   result: RestoreResult,
-  reportsDir = "reports"
+  reportsDir?: string
 ): Promise<ReportPaths> {
   const baseName = `restore-${stamp(result.finishedAt)}-${result.id.slice(0, 8)}`;
   return writeReports(
@@ -634,7 +635,7 @@ function trashPurgeMarkdown(report: TrashPurgeReport): string {
 /** Guarda el informe de gestión de papelera (JSON + Markdown). */
 export async function saveTrashPurgeReport(
   report: TrashPurgeReport,
-  reportsDir = "reports"
+  reportsDir?: string
 ): Promise<ReportPaths> {
   const baseName = `trash-${stamp(report.generatedAt)}-${report.id.slice(0, 8)}`;
   return writeReports(baseName, report, trashPurgeMarkdown(report), reportsDir);

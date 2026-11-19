@@ -1,5 +1,4 @@
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline/promises";
 import type {
@@ -18,7 +17,8 @@ import type {
 } from "../types/index.js";
 import { scanProject } from "./scanner.js";
 import { assertSafeToDelete } from "./safety.js";
-import { appendAudit, DEFAULT_AUDIT_PATH } from "./audit.js";
+import { appendAudit } from "./audit.js";
+import { resolveAuditPath } from "./output-paths.js";
 import {
   createTrashSession,
   planHashOf,
@@ -127,7 +127,7 @@ export async function executeCleanPlan(
   const startedAt = new Date().toISOString();
   const warnings: string[] = [];
   const action: CleanAction = plan.items[0]?.action ?? "trash";
-  const auditPath = path.resolve(options.auditPath ?? DEFAULT_AUDIT_PATH);
+  const auditPath = resolveAuditPath(options.auditPath);
   const planHash = planHashOf(plan);
 
   let session;

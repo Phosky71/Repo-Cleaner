@@ -346,6 +346,10 @@ ejecuta comandos del sistema.
   (JSON), _Markdown_, o descargas JSON ↓ / MD ↓.
 - Los informes son de solo lectura: la UI no permite editarlos ni
   borrarlos.
+- Si lanzas `repo-cleaner` desde un directorio no escribible (p. ej.
+  `C:\Windows\System32`), los informes y la auditoría se guardan en
+  `~/.repo-cleaner/` (reports/ y logs/). Usa `--reports-dir` y
+  `--audit-path` para elegir otro destino.
 
 ## 16. Cómo desinstalar el comando global
 

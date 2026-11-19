@@ -9,7 +9,6 @@ import { inspectRepository } from "../core/inspect.js";
 import { cleanRepository } from "../core/cleaner.js";
 import { restoreRepository } from "../core/restore.js";
 import { trashRepository } from "../core/trash-admin.js";
-import { DEFAULT_AUDIT_PATH } from "../core/audit.js";
 import {
   formatProjectLine,
   printArtifactDetails,
@@ -39,12 +38,15 @@ program
   )
   .argument("<target>", "Ruta raíz a escanear (p. ej. C:\\Trabajo)")
   .option("--config <path>", "Ruta del archivo de reglas", DEFAULT_CONFIG_PATH)
-  .option("--reports-dir <path>", "Directorio de informes", "reports")
+  .option(
+    "--reports-dir <path>",
+    "Directorio de informes (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
   .option("--verbose", "Muestra todos los elementos detectados", false)
   .action(
     async (
       target: string,
-      options: { config: string; reportsDir: string; verbose: boolean }
+      options: { config: string; reportsDir?: string; verbose: boolean }
     ) => {
       try {
         const { rules, source } = await loadRules(options.config);
@@ -86,12 +88,15 @@ program
   )
   .argument("<target>", "Ruta del proyecto")
   .option("--config <path>", "Ruta del archivo de reglas", DEFAULT_CONFIG_PATH)
-  .option("--reports-dir <path>", "Directorio de informes", "reports")
+  .option(
+    "--reports-dir <path>",
+    "Directorio de informes (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
   .option("--verbose", "Muestra también los elementos protegidos", false)
   .action(
     async (
       target: string,
-      options: { config: string; reportsDir: string; verbose: boolean }
+      options: { config: string; reportsDir?: string; verbose: boolean }
     ) => {
       try {
         const { rules, source } = await loadRules(options.config);
@@ -139,8 +144,14 @@ program
   .option("--only <paths...>", "Selecciona solo estas rutas relativas")
   .option("--exclude <paths...>", "Excluye estas rutas relativas del plan")
   .option("--trash-dir <path>", "Directorio de papelera alternativo")
-  .option("--audit-path <path>", "Log de auditoría JSONL", DEFAULT_AUDIT_PATH)
-  .option("--reports-dir <path>", "Directorio de informes", "reports")
+  .option(
+    "--audit-path <path>",
+    "Log de auditoría JSONL (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
+  .option(
+    "--reports-dir <path>",
+    "Directorio de informes (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
   .action(
     async (
       target: string,
@@ -153,8 +164,8 @@ program
         only?: string[];
         exclude?: string[];
         trashDir?: string;
-        auditPath: string;
-        reportsDir: string;
+        auditPath?: string;
+        reportsDir?: string;
       }
     ) => {
       try {
@@ -203,8 +214,14 @@ program
     false
   )
   .option("--config <path>", "Ruta del archivo de reglas", DEFAULT_CONFIG_PATH)
-  .option("--audit-path <path>", "Log de auditoría JSONL", DEFAULT_AUDIT_PATH)
-  .option("--reports-dir <path>", "Directorio de informes", "reports")
+  .option(
+    "--audit-path <path>",
+    "Log de auditoría JSONL (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
+  .option(
+    "--reports-dir <path>",
+    "Directorio de informes (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
   .action(
     async (
       target: string,
@@ -216,8 +233,8 @@ program
         dryRun: boolean;
         yes: boolean;
         config: string;
-        auditPath: string;
-        reportsDir: string;
+        auditPath?: string;
+        reportsDir?: string;
       }
     ) => {
       try {
@@ -268,8 +285,14 @@ program
     false
   )
   .option("--config <path>", "Ruta del archivo de reglas", DEFAULT_CONFIG_PATH)
-  .option("--audit-path <path>", "Log de auditoría JSONL", DEFAULT_AUDIT_PATH)
-  .option("--reports-dir <path>", "Directorio de informes", "reports")
+  .option(
+    "--audit-path <path>",
+    "Log de auditoría JSONL (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
+  .option(
+    "--reports-dir <path>",
+    "Directorio de informes (defecto: cwd escribible o ~/.repo-cleaner)"
+  )
   .action(
     async (
       target: string,
@@ -280,8 +303,8 @@ program
         dryRun: boolean;
         yes: boolean;
         config: string;
-        auditPath: string;
-        reportsDir: string;
+        auditPath?: string;
+        reportsDir?: string;
       }
     ) => {
       try {

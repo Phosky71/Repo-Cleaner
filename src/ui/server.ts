@@ -29,7 +29,7 @@ import {
 } from "../core/trash-admin.js";
 import { planHashOf } from "../core/trash.js";
 import { verifyGitStatus } from "../core/git.js";
-import { DEFAULT_AUDIT_PATH } from "../core/audit.js";
+import { resolveAuditPath, resolveReportsDir } from "../core/output-paths.js";
 import {
   saveCleanResult,
   saveRestoreResult,
@@ -103,8 +103,8 @@ export function createServer(options: UiServerOptions): Hono {
   const allowedRoot = path.resolve(options.allowedRoot);
   const rules = options.rules;
   const rulesSource = options.rulesSource ?? "no especificado";
-  const reportsDir = options.reportsDir ?? "reports";
-  const auditPath = options.auditPath ?? DEFAULT_AUDIT_PATH;
+  const reportsDir = resolveReportsDir(options.reportsDir);
+  const auditPath = resolveAuditPath(options.auditPath);
   const planTtlMs = options.planTtlMs ?? DEFAULT_PLAN_TTL_MS;
 
   const plans = new Map<string, StoredPlan>();

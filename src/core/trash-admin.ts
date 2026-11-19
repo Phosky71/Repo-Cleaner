@@ -10,7 +10,8 @@ import type {
   TrashPurgeReport,
   TrashSessionInfo
 } from "../types/index.js";
-import { appendAudit, DEFAULT_AUDIT_PATH } from "./audit.js";
+import { appendAudit } from "./audit.js";
+import { resolveAuditPath } from "./output-paths.js";
 import { TRASH_DIR_NAME } from "./trash.js";
 import {
   listTrashSessions,
@@ -66,7 +67,7 @@ export async function purgeTrashSession(
   options: { auditPath?: string } = {}
 ): Promise<TrashPurgeItem> {
   const absTarget = path.resolve(target);
-  const auditPath = path.resolve(options.auditPath ?? DEFAULT_AUDIT_PATH);
+  const auditPath = resolveAuditPath(options.auditPath);
   const base: AuditRecord = {
     timestamp: new Date().toISOString(),
     target: absTarget,

@@ -131,6 +131,8 @@ Cada acción se registra en `logs/clean-audit.jsonl` (una línea JSON por acció
 
 Cada operación genera informe JSON y Markdown en `reports/`: `root-scan-*`, `scan-*` (inspect), `clean-*`, `restore-*`, `trash-*`. La UI muestra el histórico y permite abrirlos y descargarlos (solo lectura).
 
+**Destino de las salidas**: por defecto, `reports/` y `logs/` se crean en el directorio de trabajo actual si es escribible; si no lo es (p. ej. al lanzar `repo-cleaner` desde `C:\Windows\System32`), se usa `~/.repo-cleaner/` como destino escribible. Las opciones explícitas `--reports-dir` y `--audit-path` siempre se respetan.
+
 ## Reglas
 
 `config/rules.json` define el comportamiento:

@@ -20,7 +20,8 @@ import type {
 } from "../types/index.js";
 import { DEFAULT_RULES } from "../rules/defaults.js";
 import { classifyPath } from "./rule-engine.js";
-import { appendAudit, DEFAULT_AUDIT_PATH } from "./audit.js";
+import { appendAudit } from "./audit.js";
+import { resolveAuditPath } from "./output-paths.js";
 import { TRASH_DIR_NAME } from "./trash.js";
 import {
   printRestorePlan,
@@ -393,7 +394,7 @@ export async function executeRestorePlan(
   options: { auditPath?: string } = {}
 ): Promise<RestoreResult> {
   const startedAt = new Date().toISOString();
-  const auditPath = path.resolve(options.auditPath ?? DEFAULT_AUDIT_PATH);
+  const auditPath = resolveAuditPath(options.auditPath);
   const warnings: string[] = [];
   const items: RestoreResultItem[] = [];
   let restoredCount = 0;
