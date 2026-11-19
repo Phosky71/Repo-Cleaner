@@ -183,6 +183,25 @@ Cleaner Service
 
 En código: `src/cli` (Commander), `src/core` (scanner, project-meta, rule-engine, safety, cleaner, trash, trash-admin, restore, audit, git, inspect, report, format), `src/rules` (defaults + loader validado), `src/types`, `src/ui` (servidor Hono + validación + frontend vanilla). TypeScript estricto, ESM, sin dependencias pesadas.
 
+## CI
+
+El proyecto incluye integración continua para:
+
+- GitHub Actions: `.github/workflows/ci.yml`
+- Gitea Actions: `.gitea/workflows/ci.yml`
+
+Ambos workflows ejecutan:
+
+```bash
+npm run typecheck
+npm test
+npm run lint
+npm run build
+npm run verify:package
+```
+
+Se disparan en push a `main` y en pull requests hacia `main`, usan Node.js 20, permisos mínimos (`contents: read`), sin secretos, sin publicación en npm y sin push automático. Suben `reports/`, `logs/` y `coverage/` como artefactos si existen.
+
 ## Desarrollo
 
 ```bash
